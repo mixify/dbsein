@@ -1,31 +1,57 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 export function useAuth() {
   const [authorized, setAuthorized] = useState(false);
+  const [username, setUsername] = useState<string | null>(null);
   const [checked, setChecked] = useState(false);
 
-  useEffect(() => {
-    (async () => {
-      // Check if URL has token param, pass it to auth endpoint
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get("token");
-      const url = token ? `/api/auth?token=${token}` : "/api/auth";
-
-      const res = await fetch(url);
-      const data = await res.json();
-      setAuthorized(data.authorized);
-      setChecked(true);
-
-      // Clean token from URL
-      if (token) {
-        const clean = new URL(window.location.href);
-        clean.searchParams.delete("token");
-        window.history.replaceState({}, "", clean.pathname);
-      }
-    })();
+  const check = useCallback(async () => {
+    const res = await fetch("/api/auth");
+    const data = await res.json();
+    setAuthorized(data.authorized);
+    setUsername(data.username || null);
+    setChecked(true);
   }, []);
 
-  return { authorized, checked };
+  useEffect(() => { check(); }, [check]);
+
+  const login = async (user: string, pass: string): Promise<string | null> => {
+    const res = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "login", username: user, password: pass }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setAuthorized(true);
+      setUsername(data.username);
+      return null;
+    }
+    return data.error;
+  };
+
+  const register = async (user: string, pass: string): Promise<string | null> => {
+    const res = await fetch("/api/auth", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "register", username: user, password: pass }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setAuthorized(true);
+      setUsername(data.username);
+      return null;
+    }
+    return data.error;
+  };
+
+  const logout = async () => {
+    await fetch("/api/auth", { method: "DELETE" });
+    setAuthorized(false);
+    setUsername(null);
+  };
+
+  return { authorized, username, checked, login, register, logout };
 }

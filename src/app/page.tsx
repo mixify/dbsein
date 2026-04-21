@@ -1,21 +1,23 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import type { Item } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useCategories } from "@/hooks/useCategories";
 import { useItems } from "@/hooks/useItems";
+import { HomeTab } from "@/components/home/HomeTab";
 import { ItemList } from "@/components/items/ItemList";
 import { ItemDetail } from "@/components/items/ItemDetail";
-import { ItemForm } from "@/components/items/ItemForm";
-import { ImagePicker } from "@/components/items/ImagePicker";
 import { Dialog } from "@/components/ui/Dialog";
 import { TopsterGrid } from "@/components/topster/TopsterGrid";
 import { exportTopsterAsImage, downloadImage } from "@/lib/topster";
-import type { GeminiCandidate } from "@/types";
 
 export default function MainPage() {
-  const { authorized } = useAuth();
+  const { authorized, username, checked, login, register, logout } = useAuth();
+  const [loginUser, setLoginUser] = useState("");
+  const [loginPass, setLoginPass] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [isRegister, setIsRegister] = useState(false);
   const [sort, setSort] = useState("updated_at_desc");
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [activeTab, setActiveTab] = useState("home");
@@ -29,13 +31,8 @@ export default function MainPage() {
   const { items, loading: itemsLoading, addItem, updateItem, deleteItem } =
     useItems(activeCategoryId, sort);
 
-  // Dialogs triggered from Home iframe
   const [showCategories, setShowCategories] = useState(false);
   const [showTopster, setShowTopster] = useState(false);
-  const [showItemForm, setShowItemForm] = useState(false);
-  const [showImagePicker, setShowImagePicker] = useState(false);
-  const [pendingCandidate, setPendingCandidate] = useState<GeminiCandidate | null>(null);
-  const [selectedImageUrl, setSelectedImageUrl] = useState("");
 
   // Category management
   const [newCatName, setNewCatName] = useState("");
@@ -60,68 +57,6 @@ export default function MainPage() {
     } catch (e) { console.error(e); }
     setDownloading(false);
   };
-
-  // Listen for messages from Home iframe
-  useEffect(() => {
-    const handler = (e: MessageEvent) => {
-      if (e.data?.type === "dbsein:select-candidate") {
-        const c = e.data.candidate as GeminiCandidate;
-        setPendingCandidate(c);
-        if (c.image_search_query) {
-          setShowImagePicker(true);
-        } else {
-          setSelectedImageUrl("");
-          setShowItemForm(true);
-        }
-      } else if (e.data?.type === "dbsein:manual-entry") {
-        setPendingCandidate(null);
-        setSelectedImageUrl("");
-        setShowItemForm(true);
-      } else if (e.data?.type === "dbsein:open-topster") {
-        setShowTopster(true);
-      } else if (e.data?.type === "dbsein:open-categories") {
-        setShowCategories(true);
-      }
-    };
-    window.addEventListener("message", handler);
-    return () => window.removeEventListener("message", handler);
-  }, []);
-
-  const handleSelectImage = async (url: string) => {
-    const tempId = Date.now().toString(36);
-    try {
-      const res = await fetch("/api/download-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, id: tempId }),
-      });
-      const data = await res.json();
-      if (data.path) setSelectedImageUrl(data.path);
-    } catch {
-      setSelectedImageUrl(url);
-    }
-    setShowImagePicker(false);
-    setShowItemForm(true);
-  };
-
-  const handleSaveItem = async (data: {
-    categoryId: string; title: string; creator: string;
-    releaseDate: string; imageUrl: string; rating: number; review: string;
-  }) => {
-    await addItem({
-      categoryId: data.categoryId, title: data.title,
-      creator: data.creator || undefined, releaseDate: data.releaseDate || undefined,
-      imageUrl: data.imageUrl || undefined, rating: data.rating || undefined,
-      review: data.review || undefined,
-    });
-    setShowItemForm(false);
-    setPendingCandidate(null);
-    setSelectedImageUrl("");
-  };
-
-  const matchedCategory = pendingCandidate
-    ? categories.find(c => c.name === pendingCandidate.category)
-    : null;
 
   if (catLoading) {
     return <div style={{ padding: 16, fontSize: 11 }}>Loading...</div>;
@@ -157,16 +92,18 @@ export default function MainPage() {
           ))}
         </menu>
 
-        {/* Home tab - geo-bootstrap iframe */}
+        {/* Home tab */}
         <article
           role="tabpanel"
           id="tab-home"
           hidden={activeTab !== "home" || undefined}
-          style={{ padding: 0 }}
         >
-          <iframe
-            src="/home"
-            style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+          <HomeTab
+            authorized={authorized}
+            categories={categories}
+            onAddItem={addItem}
+            onOpenCategories={() => setShowCategories(true)}
+            onOpenTopster={() => setShowTopster(true)}
           />
         </article>
 
@@ -196,7 +133,13 @@ export default function MainPage() {
         <p className="status-bar-field">
           {tabs.find(t => t.id === activeTab)?.label || ""}
         </p>
-        <p className="status-bar-field">{authorized ? "Read/Write" : "Read Only"}</p>
+        <p className="status-bar-field">
+          {authorized ? (
+            <>{username} · <a href="#" onClick={e => { e.preventDefault(); logout(); }} style={{ color: "inherit" }}>logout</a></>
+          ) : (
+            <a href="#" onClick={e => { e.preventDefault(); setLoginError(""); }} style={{ color: "inherit" }}>login</a>
+          )}
+        </p>
       </div>
 
       {/* Item Detail */}
@@ -208,37 +151,6 @@ export default function MainPage() {
         onDelete={deleteItem}
         authorized={authorized}
       />
-
-      {/* Image Picker Dialog */}
-      {showImagePicker && pendingCandidate && (
-        <Dialog open={true} onClose={() => { setShowImagePicker(false); setShowItemForm(true); }} title="Select Image" width={420}>
-          <ImagePicker
-            searchQuery={pendingCandidate.image_search_query}
-            onSelect={handleSelectImage}
-            onSkip={() => { setShowImagePicker(false); setShowItemForm(true); }}
-          />
-        </Dialog>
-      )}
-
-      {/* Item Form Dialog */}
-      <Dialog open={showItemForm} onClose={() => setShowItemForm(false)} title="Add Item" width={400}>
-        <ItemForm
-          categories={categories}
-          initialData={
-            pendingCandidate
-              ? {
-                  categoryId: matchedCategory?.id || categories[0]?.id,
-                  title: pendingCandidate.title,
-                  creator: pendingCandidate.creator,
-                  releaseDate: pendingCandidate.release_date,
-                  imageUrl: selectedImageUrl,
-                }
-              : { categoryId: categories[0]?.id }
-          }
-          onSubmit={handleSaveItem}
-          onCancel={() => setShowItemForm(false)}
-        />
-      </Dialog>
 
       {/* Categories Dialog */}
       <Dialog open={showCategories} onClose={() => setShowCategories(false)} title="Edit Categories" width={320}>
@@ -310,7 +222,7 @@ export default function MainPage() {
         <fieldset style={{ marginTop: 8 }}>
           <legend>사용법</legend>
           <ol style={{ margin: "4px 0", paddingLeft: 20 }}>
-            <li><b>Home</b> 탭에서 작품명을 검색하면 LLM이 정보를 채워줍니다</li>
+            <li><b>jtoome</b> 탭에서 작품명을 검색하면 LLM이 정보를 채워줍니다</li>
             <li>카테고리 탭을 클릭해서 목록을 확인하세요</li>
             <li>컬럼 헤더를 클릭하면 정렬됩니다 (한 번 더 클릭하면 반대로)</li>
             <li>항목을 클릭하면 상세보기 / 수정 / 삭제가 가능합니다</li>
@@ -324,6 +236,41 @@ export default function MainPage() {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
           <a href="https://github.com/mixify/dbsein" target="_blank" style={{ fontSize: 11 }}>GitHub</a>
           <button onClick={() => setShowHelp(false)}>확인</button>
+        </div>
+      </Dialog>
+
+      {/* Login/Register Dialog */}
+      <Dialog open={checked && !authorized} onClose={() => {}} title={isRegister ? "Register" : "Login"} width={300}>
+        <div className="field-row-stacked" style={{ marginBottom: 6 }}>
+          <label>Username:</label>
+          <input type="text" value={loginUser} onChange={e => setLoginUser(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && document.getElementById("login-pass")?.focus()} />
+        </div>
+        <div className="field-row-stacked" style={{ marginBottom: 6 }}>
+          <label>Password:</label>
+          <input id="login-pass" type="password" value={loginPass} onChange={e => setLoginPass(e.target.value)}
+            onKeyDown={async e => {
+              if (e.key === "Enter") {
+                const err = isRegister
+                  ? await register(loginUser, loginPass)
+                  : await login(loginUser, loginPass);
+                setLoginError(err || "");
+              }
+            }} />
+        </div>
+        {loginError && <p style={{ color: "red", fontSize: 11, margin: "4px 0" }}>{loginError}</p>}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+          <a href="#" onClick={e => { e.preventDefault(); setIsRegister(!isRegister); setLoginError(""); }} style={{ fontSize: 11 }}>
+            {isRegister ? "already have an account?" : "create account"}
+          </a>
+          <button onClick={async () => {
+            const err = isRegister
+              ? await register(loginUser, loginPass)
+              : await login(loginUser, loginPass);
+            setLoginError(err || "");
+          }}>
+            {isRegister ? "Register" : "Login"}
+          </button>
         </div>
       </Dialog>
     </div>

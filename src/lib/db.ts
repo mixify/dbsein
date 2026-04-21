@@ -15,23 +15,38 @@ db.pragma("foreign_keys = ON");
 
 // Initialize tables
 db.exec(`
-  CREATE TABLE IF NOT EXISTS categories (
+  CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
-    name TEXT NOT NULL UNIQUE,
-    sort_order INTEGER NOT NULL DEFAULT 0,
+    username TEXT NOT NULL UNIQUE,
+    password_hash TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  CREATE TABLE IF NOT EXISTS profile (
-    key TEXT PRIMARY KEY,
-    value TEXT NOT NULL DEFAULT ''
+  CREATE TABLE IF NOT EXISTS sessions (
+    token TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
-  INSERT OR IGNORE INTO profile (key, value) VALUES ('name', 'DBSein');
-  INSERT OR IGNORE INTO profile (key, value) VALUES ('bio', 'my collection');
+  CREATE TABLE IF NOT EXISTS categories (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(user_id, name)
+  );
+
+  CREATE TABLE IF NOT EXISTS profile (
+    user_id TEXT NOT NULL,
+    key TEXT NOT NULL,
+    value TEXT NOT NULL DEFAULT '',
+    PRIMARY KEY (user_id, key)
+  );
 
   CREATE TABLE IF NOT EXISTS items (
     id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     creator TEXT,
@@ -45,19 +60,5 @@ db.exec(`
   );
 `);
 
-// Seed default categories if empty
-const count = db.prepare("SELECT COUNT(*) as c FROM categories").get() as { c: number };
-if (count.c === 0) {
-  const insert = db.prepare("INSERT INTO categories (id, name, sort_order) VALUES (?, ?, ?)");
-  const defaults = [
-    ["music", "음악", 0],
-    ["movie", "영화", 1],
-    ["anime", "애니", 2],
-    ["book", "책", 3],
-  ];
-  for (const [id, name, order] of defaults) {
-    insert.run(id, name, order);
-  }
-}
 
 export default db;
