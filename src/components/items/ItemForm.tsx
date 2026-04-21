@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Category } from "@/types";
 import { StarRating } from "@/components/ui/StarRating";
+import { resolveImageUrl } from "@/lib/image-url";
 
 interface ItemFormData {
   categoryId: string;
@@ -81,7 +82,7 @@ export function ItemForm({
       </div>
 
       {form.imageUrl && (
-        <img src={form.imageUrl} alt="" style={{ maxHeight: 80, marginTop: 8 }} />
+        <img src={resolveImageUrl(form.imageUrl)!} alt="" style={{ maxHeight: 80, marginTop: 8 }} />
       )}
 
       <div className="flex gap-2 justify-end" style={{ marginTop: 12 }}>

@@ -5,6 +5,7 @@ import type { Item, Category } from "@/types";
 import { Dialog } from "@/components/ui/Dialog";
 import { ItemForm } from "./ItemForm";
 import { StarRating } from "@/components/ui/StarRating";
+import { resolveImageUrl } from "@/lib/image-url";
 
 interface ItemDetailProps {
   item: Item | null;
@@ -60,7 +61,7 @@ export function ItemDetail({ item, categories, onClose, onUpdate, onDelete, auth
       ) : (
         <div>
           {item.image_url && (
-            <img src={item.image_url} alt="" style={{ maxHeight: 120, marginBottom: 8 }} />
+            <img src={resolveImageUrl(item.image_url)!} alt="" style={{ maxHeight: 120, marginBottom: 8 }} />
           )}
           <div style={{ display: "grid", gridTemplateColumns: "70px 1fr", gap: 2, fontSize: 12 }}>
             <span style={{ color: "#888" }}>Title:</span>

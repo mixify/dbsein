@@ -2,6 +2,7 @@
 
 import type { Item } from "@/types";
 import { StarRating } from "@/components/ui/StarRating";
+import { resolveImageUrl } from "@/lib/image-url";
 
 interface ItemCardProps {
   item: Item;
@@ -13,7 +14,7 @@ export function ItemCard({ item, onClick }: ItemCardProps) {
     <tr onClick={onClick} style={{ cursor: "pointer" }} className="hover:bg-[#000080] hover:text-white">
       <td style={{ width: 32, padding: 2 }}>
         {item.image_url ? (
-          <img src={item.image_url} alt="" style={{ width: 24, height: 24, objectFit: "cover" }} />
+          <img src={resolveImageUrl(item.image_url)!} alt="" style={{ width: 24, height: 24, objectFit: "cover" }} />
         ) : (
           <span style={{ display: "inline-block", width: 24, height: 24, background: "#c0c0c0" }} />
         )}

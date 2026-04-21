@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     const buffer = Buffer.from(await res.arrayBuffer());
     fs.writeFileSync(filepath, buffer);
 
-    return NextResponse.json({ path: `/images/${filename}` });
+    return NextResponse.json({ path: `/api/images/${filename}` });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Download failed";
     return NextResponse.json({ error: msg }, { status: 500 });

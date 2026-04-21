@@ -2,6 +2,7 @@
 
 import { forwardRef } from "react";
 import type { Item } from "@/types";
+import { resolveImageUrl } from "@/lib/image-url";
 
 interface TopsterGridProps {
   items: Item[];
@@ -41,7 +42,7 @@ export const TopsterGrid = forwardRef<HTMLDivElement, TopsterGridProps>(
               >
                 {item?.image_url ? (
                   <img
-                    src={item.image_url}
+                    src={resolveImageUrl(item.image_url)!}
                     alt={item.title}
                     style={{ width: "100%", height: "100%", objectFit: "cover" }}
                     crossOrigin="anonymous"
