@@ -13,19 +13,6 @@
     "updated_at": "2026-04-19T23:30:54.272Z"
   },
   {
-    "category_id": "movie",
-    "title": "test-push-check",
-    "creator": "test",
-    "release_date": null,
-    "image_url": null,
-    "rating": null,
-    "review": null,
-    "id": "efa7d75c-7498-44bb-8633-090c79c74c26",
-    "reviewed_at": "2026-04-21T12:33:30.915Z",
-    "created_at": "2026-04-21T12:33:30.915Z",
-    "updated_at": "2026-04-21T12:33:30.915Z"
-  },
-  {
     "category_id": "music",
     "title": "Aaltopiri",
     "creator": "Pan Sonic",
