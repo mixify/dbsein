@@ -53,7 +53,8 @@ export function ImagePicker({ searchQuery, onSelect, onSkip }: ImagePickerProps)
             key={i}
             onClick={() => onSelect(url)}
             style={{ padding: 0, border: "2px outset #c0c0c0", background: "#c0c0c0", cursor: "pointer" }}
-            className="hover:border-[#000080]"
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "#316ac5"; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "#c0c0c0"; }}
           >
             <img
               src={url}

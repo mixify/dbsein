@@ -21,7 +21,8 @@ export function CandidateSelector({ candidates, onSelect }: CandidateSelectorPro
             <button
               onClick={() => onSelect(c)}
               style={{ background: "none", border: "none", cursor: "pointer", textAlign: "left", width: "100%", padding: "2px 4px", fontSize: 12 }}
-              className="hover:bg-[#000080] hover:text-white"
+              onMouseEnter={e => { e.currentTarget.style.background = "#316ac5"; e.currentTarget.style.color = "#fff"; }}
+              onMouseLeave={e => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "inherit"; }}
             >
               {c.title} — {c.creator} · {c.release_date?.slice(0, 4)} · {c.category}
             </button>

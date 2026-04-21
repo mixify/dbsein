@@ -18,7 +18,7 @@ export const TopsterGrid = forwardRef<HTMLDivElement, TopsterGridProps>(
     return (
       <div
         ref={ref}
-        className="sunken-panel inline-block"
+        className="sunken-panel"
         style={{ padding: 4, background: "#000" }}
       >
         <div

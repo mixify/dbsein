@@ -7,9 +7,10 @@ interface DialogProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  width?: number;
 }
 
-export function Dialog({ open, onClose, title, children }: DialogProps) {
+export function Dialog({ open, onClose, title, children, width = 360 }: DialogProps) {
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -22,19 +23,17 @@ export function Dialog({ open, onClose, title, children }: DialogProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="absolute inset-0 flex items-start justify-center pt-12 px-4 pointer-events-none">
-        <div className="window pointer-events-auto w-full max-w-[420px] max-h-[80vh] flex flex-col">
-          <div className="title-bar">
-            <div className="title-bar-text">{title}</div>
-            <div className="title-bar-controls">
-              <button aria-label="Close" onClick={onClose} />
-            </div>
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.3)" }} onClick={onClose} />
+      <div className="window" style={{ width, position: "relative", zIndex: 1, maxHeight: "80vh", display: "flex", flexDirection: "column" }}>
+        <div className="title-bar">
+          <div className="title-bar-text">{title}</div>
+          <div className="title-bar-controls">
+            <button aria-label="Close" onClick={onClose} />
           </div>
-          <div className="window-body overflow-y-auto">
-            {children}
-          </div>
+        </div>
+        <div className="window-body" style={{ overflowY: "auto" }}>
+          {children}
         </div>
       </div>
     </div>

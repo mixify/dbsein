@@ -1,33 +1,25 @@
-@import "tailwindcss" layer(utilities);
-
-@layer base {
-  html, body {
-    margin: 0;
-    padding: 0;
-    height: 100%;
-    overflow: hidden;
-  }
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
-.window {
-  margin: 0 !important;
-  border-radius: 0 !important;
+/* Tabs fill available space */
+.tabs-fill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 4px 4px 0;
 }
 
-.window-body {
-  margin: 0 !important;
+.tabs-fill [role="tabpanel"]:not([hidden]) {
+  flex: 1;
+  overflow: auto;
 }
 
-/* Tabs: remove extra padding in tabpanel */
-section.tabs [role="tabpanel"] {
-  padding: 0 !important;
-}
-
-section.tabs menu[role="tablist"] {
-  margin-bottom: -1px;
-}
-
-/* Windows XP Explorer list view header */
+/* Windows XP Explorer list view */
 .listview-header th {
   background: linear-gradient(180deg, #fff 0%, #e8e6d2 100%);
   border-right: 1px solid #c8c6b2;
@@ -47,7 +39,6 @@ section.tabs menu[role="tablist"] {
 
 .listview-header th:active {
   background: linear-gradient(180deg, #e0ded0 0%, #c8c6b2 100%);
-  border-style: inset;
 }
 
 .listview-header th.sorted {

@@ -1,89 +1,182 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Item } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useCategories } from "@/hooks/useCategories";
 import { useItems } from "@/hooks/useItems";
 import { ItemList } from "@/components/items/ItemList";
-import { AddItemDialog } from "@/components/items/AddItemDialog";
 import { ItemDetail } from "@/components/items/ItemDetail";
-import { CategoryManager as CatManager } from "@/components/categories/CategoryManager";
+import { ItemForm } from "@/components/items/ItemForm";
+import { ImagePicker } from "@/components/items/ImagePicker";
+import { Dialog } from "@/components/ui/Dialog";
+import { TopsterGrid } from "@/components/topster/TopsterGrid";
+import { exportTopsterAsImage, downloadImage } from "@/lib/topster";
+import type { GeminiCandidate } from "@/types";
 
-export default function HomePage() {
+export default function MainPage() {
   const { authorized } = useAuth();
   const [sort, setSort] = useState("updated_at_desc");
-  const [showAdd, setShowAdd] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
-  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
-  const [showCatManager, setShowCatManager] = useState(false);
+  const [activeTab, setActiveTab] = useState("home");
+  const [showHelp, setShowHelp] = useState(false);
 
   const { categories, loading: catLoading, addCategory, renameCategory, deleteCategory } =
     useCategories();
 
-  const effectiveCategoryId =
-    activeCategoryId || (categories.length > 0 ? categories[0].id : null);
+  const activeCategoryId = activeTab === "home" ? null : activeTab;
 
   const { items, loading: itemsLoading, addItem, updateItem, deleteItem } =
-    useItems(effectiveCategoryId, sort);
+    useItems(activeCategoryId, sort);
+
+  // Dialogs triggered from Home iframe
+  const [showCategories, setShowCategories] = useState(false);
+  const [showTopster, setShowTopster] = useState(false);
+  const [showItemForm, setShowItemForm] = useState(false);
+  const [showImagePicker, setShowImagePicker] = useState(false);
+  const [pendingCandidate, setPendingCandidate] = useState<GeminiCandidate | null>(null);
+  const [selectedImageUrl, setSelectedImageUrl] = useState("");
+
+  // Category management
+  const [newCatName, setNewCatName] = useState("");
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editingCatName, setEditingCatName] = useState("");
+  const [selectedCatId, setSelectedCatId] = useState<string | null>(null);
+
+  // Topster
+  const [topsterCatId, setTopsterCatId] = useState<string | null>(null);
+  const [gridSize, setGridSize] = useState(3);
+  const [showCaptions, setShowCaptions] = useState(true);
+  const [downloading, setDownloading] = useState(false);
+  const { items: topsterItems } = useItems(topsterCatId, "rating_desc");
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  const handleTopsterDownload = async () => {
+    if (!gridRef.current) return;
+    setDownloading(true);
+    try {
+      const dataUrl = await exportTopsterAsImage(gridRef.current);
+      downloadImage(dataUrl, `dbsein-topster-${gridSize}x${gridSize}.png`);
+    } catch (e) { console.error(e); }
+    setDownloading(false);
+  };
+
+  // Listen for messages from Home iframe
+  useEffect(() => {
+    const handler = (e: MessageEvent) => {
+      if (e.data?.type === "dbsein:select-candidate") {
+        const c = e.data.candidate as GeminiCandidate;
+        setPendingCandidate(c);
+        if (c.image_search_query) {
+          setShowImagePicker(true);
+        } else {
+          setSelectedImageUrl("");
+          setShowItemForm(true);
+        }
+      } else if (e.data?.type === "dbsein:manual-entry") {
+        setPendingCandidate(null);
+        setSelectedImageUrl("");
+        setShowItemForm(true);
+      } else if (e.data?.type === "dbsein:open-topster") {
+        setShowTopster(true);
+      } else if (e.data?.type === "dbsein:open-categories") {
+        setShowCategories(true);
+      }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
+  const handleSelectImage = async (url: string) => {
+    const tempId = Date.now().toString(36);
+    try {
+      const res = await fetch("/api/download-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url, id: tempId }),
+      });
+      const data = await res.json();
+      if (data.path) setSelectedImageUrl(data.path);
+    } catch {
+      setSelectedImageUrl(url);
+    }
+    setShowImagePicker(false);
+    setShowItemForm(true);
+  };
+
+  const handleSaveItem = async (data: {
+    categoryId: string; title: string; creator: string;
+    releaseDate: string; imageUrl: string; rating: number; review: string;
+  }) => {
+    await addItem({
+      categoryId: data.categoryId, title: data.title,
+      creator: data.creator || undefined, releaseDate: data.releaseDate || undefined,
+      imageUrl: data.imageUrl || undefined, rating: data.rating || undefined,
+      review: data.review || undefined,
+    });
+    setShowItemForm(false);
+    setPendingCandidate(null);
+    setSelectedImageUrl("");
+  };
+
+  const matchedCategory = pendingCandidate
+    ? categories.find(c => c.name === pendingCandidate.category)
+    : null;
 
   if (catLoading) {
     return <div style={{ padding: 16, fontSize: 11 }}>Loading...</div>;
   }
 
+  const tabs = [
+    { id: "home", label: "Home" },
+    ...categories.map(c => ({ id: c.id, label: c.name })),
+  ];
+
   return (
     <div className="window" style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column" }}>
-      {/* Title bar */}
       <div className="title-bar">
         <div className="title-bar-text">DBSein</div>
         <div className="title-bar-controls">
-          <button aria-label="Help" onClick={() => window.open("https://github.com/mixify/dbsein", "_blank")} />
+          <button aria-label="Help" onClick={() => setShowHelp(true)} />
           <button aria-label="Close" />
         </div>
       </div>
 
-      {/* Menu bar */}
-      <div style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 2,
-        padding: "1px 2px",
-        background: "#ece9d8",
-        borderBottom: "1px solid #aca899",
-        fontSize: 11,
-      }}>
-        {authorized && (
-          <button onClick={() => setShowAdd(true)}>Add Item</button>
-        )}
-        <button onClick={() => window.location.href = "/topster"}>Topster</button>
-        <div style={{ flex: 1 }} />
-        {authorized && (
-          <button onClick={() => setShowCatManager(true)}>Edit Categories</button>
-        )}
-      </div>
-
-      {/* Tabs + Content */}
-      <section className="tabs" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+      <section className="tabs tabs-fill">
         <menu role="tablist">
-          {categories.map((cat) => (
+          {tabs.map(tab => (
             <button
-              key={cat.id}
+              key={tab.id}
               role="tab"
-              aria-selected={effectiveCategoryId === cat.id}
-              aria-controls={`tab-${cat.id}`}
-              onClick={() => setActiveCategoryId(cat.id)}
+              aria-selected={activeTab === tab.id}
+              aria-controls={`tab-${tab.id}`}
+              onClick={() => setActiveTab(tab.id)}
             >
-              {cat.name}
+              {tab.label}
             </button>
           ))}
         </menu>
-        {categories.map((cat) => (
+
+        {/* Home tab - geo-bootstrap iframe */}
+        <article
+          role="tabpanel"
+          id="tab-home"
+          hidden={activeTab !== "home" || undefined}
+          style={{ padding: 0 }}
+        >
+          <iframe
+            src="/home"
+            style={{ width: "100%", height: "100%", border: "none", display: "block" }}
+          />
+        </article>
+
+        {/* Category tabs */}
+        {categories.map(cat => (
           <article
             key={cat.id}
             role="tabpanel"
             id={`tab-${cat.id}`}
-            hidden={effectiveCategoryId !== cat.id}
-            style={{ flex: 1, overflow: "auto", padding: 0 }}
+            hidden={activeTab !== cat.id || undefined}
           >
             <ItemList
               items={items}
@@ -96,24 +189,17 @@ export default function HomePage() {
         ))}
       </section>
 
-      {/* Status bar */}
       <div className="status-bar">
-        <p className="status-bar-field">{items.length} items</p>
-        <p className="status-bar-field">{categories.find(c => c.id === effectiveCategoryId)?.name || ""}</p>
+        <p className="status-bar-field">
+          {activeTab === "home" ? "Home" : `${items.length} items`}
+        </p>
+        <p className="status-bar-field">
+          {tabs.find(t => t.id === activeTab)?.label || ""}
+        </p>
         <p className="status-bar-field">{authorized ? "Read/Write" : "Read Only"}</p>
       </div>
 
-      {/* Dialogs */}
-      {authorized && (
-        <AddItemDialog
-          open={showAdd}
-          onClose={() => setShowAdd(false)}
-          categories={categories}
-          activeCategoryId={effectiveCategoryId}
-          onSave={addItem}
-        />
-      )}
-
+      {/* Item Detail */}
       <ItemDetail
         item={selectedItem}
         categories={categories}
@@ -123,16 +209,123 @@ export default function HomePage() {
         authorized={authorized}
       />
 
-      {authorized && (
-        <CatManager
-          open={showCatManager}
-          onClose={() => setShowCatManager(false)}
-          categories={categories}
-          onAdd={addCategory}
-          onRename={renameCategory}
-          onDelete={deleteCategory}
-        />
+      {/* Image Picker Dialog */}
+      {showImagePicker && pendingCandidate && (
+        <Dialog open={true} onClose={() => { setShowImagePicker(false); setShowItemForm(true); }} title="Select Image" width={420}>
+          <ImagePicker
+            searchQuery={pendingCandidate.image_search_query}
+            onSelect={handleSelectImage}
+            onSkip={() => { setShowImagePicker(false); setShowItemForm(true); }}
+          />
+        </Dialog>
       )}
+
+      {/* Item Form Dialog */}
+      <Dialog open={showItemForm} onClose={() => setShowItemForm(false)} title="Add Item" width={400}>
+        <ItemForm
+          categories={categories}
+          initialData={
+            pendingCandidate
+              ? {
+                  categoryId: matchedCategory?.id || categories[0]?.id,
+                  title: pendingCandidate.title,
+                  creator: pendingCandidate.creator,
+                  releaseDate: pendingCandidate.release_date,
+                  imageUrl: selectedImageUrl,
+                }
+              : { categoryId: categories[0]?.id }
+          }
+          onSubmit={handleSaveItem}
+          onCancel={() => setShowItemForm(false)}
+        />
+      </Dialog>
+
+      {/* Categories Dialog */}
+      <Dialog open={showCategories} onClose={() => setShowCategories(false)} title="Edit Categories" width={320}>
+        <div className="field-row" style={{ gap: 4, marginBottom: 8 }}>
+          <input type="text" value={newCatName}
+            onChange={e => setNewCatName(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter" && newCatName.trim()) { addCategory(newCatName.trim()); setNewCatName(""); } }}
+            placeholder="New category" style={{ flex: 1 }} />
+          <button onClick={() => { if (newCatName.trim()) { addCategory(newCatName.trim()); setNewCatName(""); } }}>Add</button>
+        </div>
+        <ul className="tree-view" style={{ height: 120, overflow: "auto" }}>
+          {categories.map(cat => (
+            <li key={cat.id} onClick={() => setSelectedCatId(cat.id)}
+              style={{ padding: "2px 4px", cursor: "pointer",
+                background: selectedCatId === cat.id ? "#316ac5" : "transparent",
+                color: selectedCatId === cat.id ? "#fff" : "inherit" }}>
+              {editingCatId === cat.id ? (
+                <span onClick={e => e.stopPropagation()}>
+                  <input type="text" value={editingCatName} onChange={e => setEditingCatName(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { renameCategory(cat.id, editingCatName); setEditingCatId(null); } }}
+                    style={{ width: 100 }} autoFocus />
+                  <button onClick={() => { renameCategory(cat.id, editingCatName); setEditingCatId(null); }}>OK</button>
+                  <button onClick={() => setEditingCatId(null)}>Cancel</button>
+                </span>
+              ) : cat.name}
+            </li>
+          ))}
+        </ul>
+        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
+          <button disabled={!selectedCatId} onClick={() => {
+            const cat = categories.find(c => c.id === selectedCatId);
+            if (cat) { setEditingCatId(cat.id); setEditingCatName(cat.name); }
+          }}>Rename</button>
+          <button disabled={!selectedCatId} onClick={() => {
+            if (selectedCatId && confirm("Delete category and all items?")) {
+              deleteCategory(selectedCatId); setSelectedCatId(null);
+            }
+          }}>Delete</button>
+        </div>
+      </Dialog>
+
+      {/* Topster Dialog */}
+      <Dialog open={showTopster} onClose={() => setShowTopster(false)} title="Topster" width={500}>
+        <div style={{ display: "flex", gap: 6, marginBottom: 8, flexWrap: "wrap", alignItems: "center" }}>
+          <select value={topsterCatId || ""} onChange={e => setTopsterCatId(e.target.value || null)}>
+            <option value="">All</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          {[3, 4, 5].map(s => (
+            <button key={s} onClick={() => setGridSize(s)} style={{ fontWeight: gridSize === s ? "bold" : "normal" }}>{s}x{s}</button>
+          ))}
+          <label style={{ display: "flex", alignItems: "center", gap: 4 }}>
+            <input type="checkbox" checked={showCaptions} onChange={e => setShowCaptions(e.target.checked)} />
+            Captions
+          </label>
+          <button onClick={handleTopsterDownload} disabled={downloading}>
+            {downloading ? "Saving..." : "Save PNG"}
+          </button>
+        </div>
+        <div style={{ overflow: "auto" }}>
+          <TopsterGrid ref={gridRef} items={topsterItems} gridSize={gridSize} showCaptions={showCaptions} />
+        </div>
+      </Dialog>
+
+      {/* Help Dialog */}
+      <Dialog open={showHelp} onClose={() => setShowHelp(false)} title="DBSein 도움말" width={420}>
+        <p><b>DBSein</b> — LLM을 DB처럼 쓰는 리뷰/로깅 앱</p>
+        <p style={{ color: "#666" }}>작품명만 입력하면 LLM이 제작자, 출시일 등 메타정보를 자동으로 채워줍니다.</p>
+        <fieldset style={{ marginTop: 8 }}>
+          <legend>사용법</legend>
+          <ol style={{ margin: "4px 0", paddingLeft: 20 }}>
+            <li><b>Home</b> 탭에서 작품명을 검색하면 LLM이 정보를 채워줍니다</li>
+            <li>카테고리 탭을 클릭해서 목록을 확인하세요</li>
+            <li>컬럼 헤더를 클릭하면 정렬됩니다 (한 번 더 클릭하면 반대로)</li>
+            <li>항목을 클릭하면 상세보기 / 수정 / 삭제가 가능합니다</li>
+          </ol>
+        </fieldset>
+        <fieldset style={{ marginTop: 8 }}>
+          <legend>카테고리</legend>
+          <p style={{ margin: "4px 0" }}>카테고리를 추가하면 <b>LLM이 추가된 카테고리도 포함해서 추론</b>합니다.</p>
+          <p style={{ margin: "4px 0" }}><b>예시:</b> 게임, 드라마, 미애니(일애니와 구분), 공연, 전시, 맛집</p>
+        </fieldset>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 12 }}>
+          <a href="https://github.com/mixify/dbsein" target="_blank" style={{ fontSize: 11 }}>GitHub</a>
+          <button onClick={() => setShowHelp(false)}>확인</button>
+        </div>
+      </Dialog>
     </div>
   );
 }

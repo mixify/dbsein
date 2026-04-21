@@ -14,7 +14,7 @@ export function StarRating({ value, onChange, readonly = false, size = 20 }: Sta
   const display = hover ?? value;
 
   return (
-    <span className="inline-flex items-center">
+    <span style={{ display: "inline-flex", alignItems: "center" }}>
       {[1, 2, 3, 4, 5].map((star) => {
         const filled = display >= star;
         const half = !filled && display >= star - 0.5;

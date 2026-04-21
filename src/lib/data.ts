@@ -1,6 +1,18 @@
 import db from "./db";
 import type { Category, Item } from "@/types";
 
+// Profile
+export function getProfile(): Record<string, string> {
+  const rows = db.prepare("SELECT key, value FROM profile").all() as { key: string; value: string }[];
+  const result: Record<string, string> = {};
+  for (const row of rows) result[row.key] = row.value;
+  return result;
+}
+
+export function updateProfile(key: string, value: string) {
+  db.prepare("INSERT OR REPLACE INTO profile (key, value) VALUES (?, ?)").run(key, value);
+}
+
 // Categories
 export function getCategories(): Category[] {
   return db.prepare("SELECT * FROM categories ORDER BY sort_order").all() as Category[];

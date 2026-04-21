@@ -22,6 +22,14 @@ db.exec(`
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 
+  CREATE TABLE IF NOT EXISTS profile (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL DEFAULT ''
+  );
+
+  INSERT OR IGNORE INTO profile (key, value) VALUES ('name', 'DBSein');
+  INSERT OR IGNORE INTO profile (key, value) VALUES ('bio', 'my collection');
+
   CREATE TABLE IF NOT EXISTS items (
     id TEXT PRIMARY KEY,
     category_id TEXT NOT NULL REFERENCES categories(id) ON DELETE CASCADE,

@@ -16,7 +16,7 @@ export default function RootLayout({
       <head>
         <link rel="stylesheet" href="/xp.css" />
       </head>
-      <body className="min-h-screen">{children}</body>
+      <body>{children}</body>
     </html>
   );
 }
