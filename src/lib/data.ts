@@ -26,10 +26,11 @@ function autoCommit(message: string) {
     // push if GITHUB_TOKEN is set
     const token = process.env.GITHUB_TOKEN;
     if (token) {
-      execSync(`git push origin main`, {
+      execSync(`git pull origin main --rebase --no-edit 2>/dev/null; git push origin main`, {
         cwd: ROOT_DIR,
         encoding: "utf-8",
-        timeout: 15000,
+        timeout: 30000,
+        shell: "/bin/sh",
       });
     }
   } catch {
