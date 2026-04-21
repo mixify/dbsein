@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import "98.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -14,6 +13,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
+      <head>
+        <link rel="stylesheet" href="/xp.css" />
+      </head>
       <body className="min-h-screen">{children}</body>
     </html>
   );
