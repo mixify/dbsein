@@ -26,7 +26,7 @@ function autoCommit(message: string) {
     // push if GITHUB_TOKEN is set
     const token = process.env.GITHUB_TOKEN;
     if (token) {
-      execSync(`git push`, {
+      execSync(`git push origin main`, {
         cwd: ROOT_DIR,
         encoding: "utf-8",
         timeout: 15000,
