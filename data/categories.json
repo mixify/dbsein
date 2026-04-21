@@ -1,6 +1,0 @@
-[
-  { "id": "music", "name": "음악", "sort_order": 0 },
-  { "id": "movie", "name": "영화", "sort_order": 1 },
-  { "id": "anime", "name": "애니", "sort_order": 2 },
-  { "id": "book", "name": "책", "sort_order": 3 }
-]

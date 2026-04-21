@@ -10,22 +10,7 @@ export async function GET(req: NextRequest) {
   const categoryId = params.get("categoryId");
   const sort = (params.get("sort") as SortMode) || "reviewed_at";
 
-  let items = getItems();
-
-  if (categoryId) {
-    items = items.filter((i) => i.category_id === categoryId);
-  }
-
-  items.sort((a, b) => {
-    if (sort === "rating") {
-      return (b.rating ?? 0) - (a.rating ?? 0);
-    } else if (sort === "release_date") {
-      return (b.release_date ?? "").localeCompare(a.release_date ?? "");
-    } else {
-      return (b.reviewed_at ?? "").localeCompare(a.reviewed_at ?? "");
-    }
-  });
-
+  const items = getItems(categoryId, sort);
   return NextResponse.json(items);
 }
 

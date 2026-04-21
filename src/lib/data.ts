@@ -1,113 +1,78 @@
-import fs from "fs";
-import path from "path";
-import { execSync } from "child_process";
+import db from "./db";
 import type { Category, Item } from "@/types";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const ROOT_DIR = process.cwd();
-
-function readJson<T>(filename: string): T {
-  const filepath = path.join(DATA_DIR, filename);
-  return JSON.parse(fs.readFileSync(filepath, "utf-8"));
-}
-
-function writeJson(filename: string, data: unknown) {
-  const filepath = path.join(DATA_DIR, filename);
-  fs.writeFileSync(filepath, JSON.stringify(data, null, 2) + "\n", "utf-8");
-}
-
-function autoCommit(message: string) {
-  try {
-    execSync(`git add data/ public/images/ && git commit -m "${message}"`, {
-      cwd: ROOT_DIR,
-      encoding: "utf-8",
-      timeout: 10000,
-    });
-    // push if GITHUB_TOKEN is set
-    const token = process.env.GITHUB_TOKEN;
-    if (token) {
-      execSync(`git pull origin main --rebase --no-edit 2>/dev/null; git push origin main`, {
-        cwd: ROOT_DIR,
-        encoding: "utf-8",
-        timeout: 30000,
-        shell: "/bin/sh",
-      });
-    }
-  } catch {
-    // no changes to commit or git not available
-  }
-}
 
 // Categories
 export function getCategories(): Category[] {
-  return readJson<Category[]>("categories.json");
+  return db.prepare("SELECT * FROM categories ORDER BY sort_order").all() as Category[];
 }
 
 export function addCategory(name: string): Category {
-  const categories = getCategories();
-  const maxOrder = categories.reduce((max, c) => Math.max(max, c.sort_order), -1);
   const id = name.toLowerCase().replace(/\s+/g, "-") + "-" + Date.now();
-  const newCat: Category = { id, name, sort_order: maxOrder + 1 };
-  categories.push(newCat);
-  writeJson("categories.json", categories);
-  autoCommit(`add category: ${name}`);
-  return newCat;
+  const maxOrder = db.prepare("SELECT MAX(sort_order) as m FROM categories").get() as { m: number | null };
+  const sortOrder = (maxOrder.m ?? -1) + 1;
+  db.prepare("INSERT INTO categories (id, name, sort_order) VALUES (?, ?, ?)").run(id, name, sortOrder);
+  return db.prepare("SELECT * FROM categories WHERE id = ?").get(id) as Category;
 }
 
 export function renameCategory(id: string, name: string): Category | null {
-  const categories = getCategories();
-  const idx = categories.findIndex((c) => c.id === id);
-  if (idx === -1) return null;
-  categories[idx].name = name;
-  writeJson("categories.json", categories);
-  autoCommit(`rename category: ${name}`);
-  return categories[idx];
+  const result = db.prepare("UPDATE categories SET name = ? WHERE id = ?").run(name, id);
+  if (result.changes === 0) return null;
+  return db.prepare("SELECT * FROM categories WHERE id = ?").get(id) as Category;
 }
 
 export function deleteCategory(id: string) {
-  const categories = getCategories().filter((c) => c.id !== id);
-  writeJson("categories.json", categories);
-  // Also remove items in that category
-  const items = getItems().filter((i) => i.category_id !== id);
-  writeJson("items.json", items);
-  autoCommit(`delete category: ${id}`);
+  db.prepare("DELETE FROM categories WHERE id = ?").run(id);
 }
 
 // Items
-export function getItems(): Item[] {
-  return readJson<Item[]>("items.json");
+export function getItems(categoryId?: string | null, sort: string = "reviewed_at"): Item[] {
+  const orderCol = sort === "rating" ? "rating" : sort === "release_date" ? "release_date" : "reviewed_at";
+  let sql = `SELECT * FROM items`;
+  const params: unknown[] = [];
+
+  if (categoryId) {
+    sql += ` WHERE category_id = ?`;
+    params.push(categoryId);
+  }
+
+  sql += ` ORDER BY ${orderCol} DESC`;
+
+  return db.prepare(sql).all(...params) as Item[];
 }
 
 export function addItem(item: Omit<Item, "id" | "created_at" | "updated_at" | "reviewed_at">): Item {
-  const items = getItems();
+  const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  const newItem: Item = {
-    ...item,
-    id: crypto.randomUUID(),
-    reviewed_at: now,
-    created_at: now,
-    updated_at: now,
-  };
-  items.push(newItem);
-  writeJson("items.json", items);
-  autoCommit(`add: ${item.title}`);
-  return newItem;
+  db.prepare(`
+    INSERT INTO items (id, category_id, title, creator, release_date, image_url, rating, review, reviewed_at, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, item.category_id, item.title, item.creator, item.release_date, item.image_url, item.rating, item.review, now, now, now);
+  return db.prepare("SELECT * FROM items WHERE id = ?").get(id) as Item;
 }
 
 export function updateItem(id: string, fields: Partial<Item>): Item | null {
-  const items = getItems();
-  const idx = items.findIndex((i) => i.id === id);
-  if (idx === -1) return null;
-  items[idx] = { ...items[idx], ...fields, updated_at: new Date().toISOString() };
-  writeJson("items.json", items);
-  autoCommit(`update: ${items[idx].title}`);
-  return items[idx];
+  const sets: string[] = [];
+  const values: unknown[] = [];
+
+  if (fields.title !== undefined) { sets.push("title = ?"); values.push(fields.title); }
+  if (fields.creator !== undefined) { sets.push("creator = ?"); values.push(fields.creator); }
+  if (fields.release_date !== undefined) { sets.push("release_date = ?"); values.push(fields.release_date); }
+  if (fields.image_url !== undefined) { sets.push("image_url = ?"); values.push(fields.image_url); }
+  if (fields.rating !== undefined) { sets.push("rating = ?"); values.push(fields.rating); }
+  if (fields.review !== undefined) { sets.push("review = ?"); values.push(fields.review); }
+  if (fields.category_id !== undefined) { sets.push("category_id = ?"); values.push(fields.category_id); }
+
+  if (sets.length === 0) return null;
+
+  sets.push("updated_at = ?");
+  values.push(new Date().toISOString());
+  values.push(id);
+
+  const result = db.prepare(`UPDATE items SET ${sets.join(", ")} WHERE id = ?`).run(...values);
+  if (result.changes === 0) return null;
+  return db.prepare("SELECT * FROM items WHERE id = ?").get(id) as Item;
 }
 
 export function deleteItem(id: string) {
-  const items = getItems();
-  const item = items.find((i) => i.id === id);
-  const remaining = items.filter((i) => i.id !== id);
-  writeJson("items.json", remaining);
-  autoCommit(`delete: ${item?.title || id}`);
+  db.prepare("DELETE FROM items WHERE id = ?").run(id);
 }

@@ -1,6 +1,6 @@
 FROM node:20-slim
 
-RUN apt-get update && apt-get install -y git && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -10,9 +10,8 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
+RUN mkdir -p /app/data /app/public/images
+
 EXPOSE 3000
 
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
-
-CMD ["/docker-entrypoint.sh"]
+CMD ["npm", "start"]
