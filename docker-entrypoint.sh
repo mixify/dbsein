@@ -1,17 +1,27 @@
 #!/bin/sh
 
 if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_REPO" ]; then
-  # Set remote with token auth
-  git remote remove origin 2>/dev/null
-  git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git"
+  REMOTE_URL="https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPO}.git"
 
-  # Rename branch to main and track remote
-  git branch -M main
-  git fetch origin main 2>/dev/null
-  git branch --set-upstream-to=origin/main main 2>/dev/null
+  # Clone actual repo into a temp dir, then copy .git into /app
+  if [ ! -d "/app/.git" ]; then
+    git clone --bare "$REMOTE_URL" /tmp/repo.git
+    git init /app
+    git -C /app remote add origin "$REMOTE_URL"
+    git -C /app fetch origin main
+    git -C /app reset origin/main
+    git -C /app checkout -- data/ public/images/ 2>/dev/null || true
+  else
+    git -C /app remote set-url origin "$REMOTE_URL"
+    git -C /app fetch origin main
+    git -C /app reset origin/main
+    git -C /app checkout -- data/ public/images/ 2>/dev/null || true
+  fi
 
-  # Pull latest data
-  git merge origin/main --no-edit 2>/dev/null || true
+  git -C /app config user.email "dbsein@bot"
+  git -C /app config user.name "dbsein"
+  git -C /app branch -M main
+  git -C /app branch --set-upstream-to=origin/main main 2>/dev/null
 fi
 
 exec npm start
