@@ -6,36 +6,70 @@ import { ItemCard } from "./ItemCard";
 interface ItemListProps {
   items: Item[];
   loading: boolean;
+  sort: string;
+  onSortChange: (sort: string) => void;
   onItemClick: (item: Item) => void;
 }
 
-export function ItemList({ items, loading, onItemClick }: ItemListProps) {
+type ColDef = { key: string; label: string; width?: number };
+
+const COLUMNS: ColDef[] = [
+  { key: "icon", label: "", width: 28 },
+  { key: "title", label: "Name" },
+  { key: "creator", label: "Creator", width: 160 },
+  { key: "rating", label: "Rating", width: 130 },
+  { key: "release_date", label: "Year", width: 70 },
+  { key: "updated_at", label: "Date Modified", width: 130 },
+];
+
+export function ItemList({ items, loading, sort, onSortChange, onItemClick }: ItemListProps) {
+  const [currentCol, currentDir] = sort.split(/_(?:asc|desc)$/).length
+    ? [sort.replace(/_(asc|desc)$/, ""), sort.endsWith("_asc") ? "asc" : "desc"]
+    : ["updated_at", "desc"];
+
+  const handleHeaderClick = (col: string) => {
+    if (col === "icon") return;
+    if (currentCol === col) {
+      onSortChange(`${col}_${currentDir === "desc" ? "asc" : "desc"}`);
+    } else {
+      onSortChange(`${col}_desc`);
+    }
+  };
+
   if (loading) {
-    return <div style={{ padding: 16, fontSize: 12 }}>Loading...</div>;
+    return <div style={{ padding: 16, fontSize: 11 }}>Loading...</div>;
   }
 
   if (items.length === 0) {
-    return <div style={{ padding: 16, fontSize: 12, color: "#888" }}>No items yet.</div>;
+    return <div style={{ padding: 16, fontSize: 11, color: "#888" }}>No items yet.</div>;
   }
 
   return (
-    <div className="sunken-panel" style={{ margin: 8, overflow: "auto" }}>
-      <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
-        <thead>
-          <tr style={{ textAlign: "left", background: "#c0c0c0" }}>
-            <th style={{ width: 32, padding: 2 }}></th>
-            <th style={{ padding: "2px 4px" }}>Title</th>
-            <th style={{ padding: "2px 4px" }}>Creator</th>
-            <th style={{ padding: "2px 4px" }}>Rating</th>
-            <th style={{ padding: "2px 4px" }}>Year</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <ItemCard key={item.id} item={item} onClick={() => onItemClick(item)} />
+    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+      <thead>
+        <tr className="listview-header">
+          {COLUMNS.map((col) => (
+            <th
+              key={col.key}
+              className={currentCol === col.key ? "sorted" : ""}
+              onClick={() => handleHeaderClick(col.key)}
+              style={col.width ? { width: col.width } : undefined}
+            >
+              {col.label}
+              {currentCol === col.key && (
+                <span style={{ marginLeft: 3, fontSize: 8 }}>
+                  {currentDir === "desc" ? "▼" : "▲"}
+                </span>
+              )}
+            </th>
           ))}
-        </tbody>
-      </table>
-    </div>
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((item) => (
+          <ItemCard key={item.id} item={item} onClick={() => onItemClick(item)} />
+        ))}
+      </tbody>
+    </table>
   );
 }

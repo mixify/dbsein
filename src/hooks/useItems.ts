@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { Item, SortMode } from "@/types";
+import type { Item } from "@/types";
 
-export function useItems(categoryId: string | null, sort: SortMode = "reviewed_at") {
+export function useItems(categoryId: string | null, sort: string = "updated_at_desc") {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
 

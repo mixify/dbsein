@@ -35,13 +35,13 @@ export function ItemDetail({ item, categories, onClose, onUpdate, onDelete, auth
   };
 
   const handleDelete = async () => {
-    if (!confirm("Delete this item?")) return;
+    if (!confirm("Are you sure you want to delete this item?")) return;
     const ok = await onDelete(item.id);
     if (ok) onClose();
   };
 
   return (
-    <Dialog open={!!item} onClose={onClose} title={editing ? "Edit" : item.title}>
+    <Dialog open={!!item} onClose={onClose} title={editing ? "Edit Item" : "Properties"}>
       {editing ? (
         <ItemForm
           categories={categories}
@@ -56,43 +56,50 @@ export function ItemDetail({ item, categories, onClose, onUpdate, onDelete, auth
           }}
           onSubmit={handleUpdate}
           onCancel={() => setEditing(false)}
-          submitLabel="Update"
         />
       ) : (
         <div>
           {item.image_url && (
-            <img src={resolveImageUrl(item.image_url)!} alt="" style={{ maxHeight: 120, marginBottom: 8 }} />
+            <div style={{ textAlign: "center", marginBottom: 8 }}>
+              <img src={resolveImageUrl(item.image_url)!} alt="" style={{ maxHeight: 120 }} />
+            </div>
           )}
-          <div style={{ display: "grid", gridTemplateColumns: "70px 1fr", gap: 2, fontSize: 12 }}>
-            <span style={{ color: "#888" }}>Title:</span>
-            <span>{item.title}</span>
+
+          <fieldset>
+            <legend>Details</legend>
+            <div className="field-row">
+              <label style={{ width: 70 }}>Title:</label>
+              <span>{item.title}</span>
+            </div>
             {item.creator && (
-              <>
-                <span style={{ color: "#888" }}>Creator:</span>
+              <div className="field-row">
+                <label style={{ width: 70 }}>Creator:</label>
                 <span>{item.creator}</span>
-              </>
+              </div>
             )}
             {item.release_date && (
-              <>
-                <span style={{ color: "#888" }}>Released:</span>
+              <div className="field-row">
+                <label style={{ width: 70 }}>Released:</label>
                 <span>{item.release_date}</span>
-              </>
+              </div>
             )}
             {item.rating != null && item.rating > 0 && (
-              <>
-                <span style={{ color: "#888" }}>Rating:</span>
-                <span><StarRating value={item.rating} readonly /></span>
-              </>
+              <div className="field-row">
+                <label style={{ width: 70 }}>Rating:</label>
+                <StarRating value={item.rating} readonly />
+              </div>
             )}
-          </div>
+          </fieldset>
+
           {item.review && (
             <fieldset style={{ marginTop: 8 }}>
               <legend>Review</legend>
-              <p style={{ fontSize: 12, whiteSpace: "pre-wrap" }}>{item.review}</p>
+              <p style={{ fontSize: 11, whiteSpace: "pre-wrap", margin: 0 }}>{item.review}</p>
             </fieldset>
           )}
+
           {authorized && (
-            <div className="flex gap-2" style={{ marginTop: 12 }}>
+            <div className="field-row" style={{ justifyContent: "flex-end", marginTop: 12, gap: 6 }}>
               <button onClick={() => setEditing(true)}>Edit</button>
               <button onClick={handleDelete}>Delete</button>
             </div>

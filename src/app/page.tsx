@@ -1,22 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import type { Item, SortMode } from "@/types";
+import type { Item } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 import { useCategories } from "@/hooks/useCategories";
 import { useItems } from "@/hooks/useItems";
-import { Header } from "@/components/layout/Header";
-import { BottomNav } from "@/components/layout/BottomNav";
 import { ItemList } from "@/components/items/ItemList";
 import { AddItemDialog } from "@/components/items/AddItemDialog";
 import { ItemDetail } from "@/components/items/ItemDetail";
+import { CategoryManager as CatManager } from "@/components/categories/CategoryManager";
 
 export default function HomePage() {
   const { authorized } = useAuth();
-  const [sort, setSort] = useState<SortMode>("reviewed_at");
+  const [sort, setSort] = useState("updated_at_desc");
   const [showAdd, setShowAdd] = useState(false);
   const [selectedItem, setSelectedItem] = useState<Item | null>(null);
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [showCatManager, setShowCatManager] = useState(false);
 
   const { categories, loading: catLoading, addCategory, renameCategory, deleteCategory } =
     useCategories();
@@ -28,37 +28,82 @@ export default function HomePage() {
     useItems(effectiveCategoryId, sort);
 
   if (catLoading) {
-    return <div className="p-4 text-xs text-[var(--dim)]">loading...</div>;
+    return <div style={{ padding: 16, fontSize: 11 }}>Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header sort={sort} onSortChange={setSort} />
+    <div className="window" style={{ width: "100vw", height: "100vh", display: "flex", flexDirection: "column" }}>
+      {/* Title bar */}
+      <div className="title-bar">
+        <div className="title-bar-text">DBSein</div>
+        <div className="title-bar-controls">
+          <button aria-label="Help" onClick={() => window.open("https://github.com/mixify/dbsein", "_blank")} />
+          <button aria-label="Close" />
+        </div>
+      </div>
 
-      <main className="flex-1 pb-12">
-        <ItemList items={items} loading={itemsLoading} onItemClick={setSelectedItem} />
-      </main>
+      {/* Menu bar */}
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 2,
+        padding: "1px 2px",
+        background: "#ece9d8",
+        borderBottom: "1px solid #aca899",
+        fontSize: 11,
+      }}>
+        {authorized && (
+          <button onClick={() => setShowAdd(true)}>Add Item</button>
+        )}
+        <button onClick={() => window.location.href = "/topster"}>Topster</button>
+        <div style={{ flex: 1 }} />
+        {authorized && (
+          <button onClick={() => setShowCatManager(true)}>Edit Categories</button>
+        )}
+      </div>
 
-      {authorized && (
-        <button
-          onClick={() => setShowAdd(true)}
-          className="fixed z-30"
-          style={{ bottom: 40, right: 12, fontSize: 12 }}
-        >
-          Add Item
-        </button>
-      )}
+      {/* Tabs + Content */}
+      <section className="tabs" style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+        <menu role="tablist">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              role="tab"
+              aria-selected={effectiveCategoryId === cat.id}
+              aria-controls={`tab-${cat.id}`}
+              onClick={() => setActiveCategoryId(cat.id)}
+            >
+              {cat.name}
+            </button>
+          ))}
+        </menu>
+        {categories.map((cat) => (
+          <article
+            key={cat.id}
+            role="tabpanel"
+            id={`tab-${cat.id}`}
+            hidden={effectiveCategoryId !== cat.id}
+            style={{ flex: 1, overflow: "auto", padding: 0 }}
+          >
+            <ItemList
+              items={items}
+              loading={itemsLoading}
+              sort={sort}
+              onSortChange={setSort}
+              onItemClick={setSelectedItem}
+            />
+          </article>
+        ))}
+      </section>
 
-      <BottomNav
-        categories={categories}
-        activeCategoryId={effectiveCategoryId}
-        onSelect={(id) => setActiveCategoryId(id)}
-        onAdd={addCategory}
-        onRename={renameCategory}
-        onDelete={deleteCategory}
-        authorized={authorized}
-      />
+      {/* Status bar */}
+      <div className="status-bar">
+        <p className="status-bar-field">{items.length} items</p>
+        <p className="status-bar-field">{categories.find(c => c.id === effectiveCategoryId)?.name || ""}</p>
+        <p className="status-bar-field">{authorized ? "Read/Write" : "Read Only"}</p>
+      </div>
 
+      {/* Dialogs */}
       {authorized && (
         <AddItemDialog
           open={showAdd}
@@ -77,6 +122,17 @@ export default function HomePage() {
         onDelete={deleteItem}
         authorized={authorized}
       />
+
+      {authorized && (
+        <CatManager
+          open={showCatManager}
+          onClose={() => setShowCatManager(false)}
+          categories={categories}
+          onAdd={addCategory}
+          onRename={renameCategory}
+          onDelete={deleteCategory}
+        />
+      )}
     </div>
   );
 }

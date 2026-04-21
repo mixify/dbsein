@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getItems, addItem, updateItem, deleteItem } from "@/lib/data";
 import { isAuthorized } from "@/lib/auth";
-import type { SortMode } from "@/types";
-
 const UNAUTHORIZED = NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
 export async function GET(req: NextRequest) {
   const params = req.nextUrl.searchParams;
   const categoryId = params.get("categoryId");
-  const sort = (params.get("sort") as SortMode) || "reviewed_at";
+  const sort = params.get("sort") || "updated_at_desc";
 
   const items = getItems(categoryId, sort);
   return NextResponse.json(items);

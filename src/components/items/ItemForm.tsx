@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { Category } from "@/types";
 import { StarRating } from "@/components/ui/StarRating";
-import { resolveImageUrl } from "@/lib/image-url";
 
 interface ItemFormData {
   categoryId: string;
@@ -28,7 +27,7 @@ export function ItemForm({
   initialData,
   onSubmit,
   onCancel,
-  submitLabel = "Save",
+  submitLabel = "OK",
 }: ItemFormProps) {
   const [form, setForm] = useState<ItemFormData>({
     categoryId: initialData?.categoryId || categories[0]?.id || "",
@@ -54,42 +53,47 @@ export function ItemForm({
 
   return (
     <div>
-      <div style={{ display: "grid", gridTemplateColumns: "80px 1fr", gap: 4, fontSize: 12 }}>
-        <label>Category:</label>
-        <select value={form.categoryId} onChange={(e) => update("categoryId", e.target.value)}>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+      <fieldset>
+        <legend>Details</legend>
+        <div className="field-row-stacked" style={{ marginBottom: 4 }}>
+          <label>Category:</label>
+          <select value={form.categoryId} onChange={(e) => update("categoryId", e.target.value)}>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="field-row-stacked" style={{ marginBottom: 4 }}>
+          <label>Title:</label>
+          <input type="text" value={form.title} onChange={(e) => update("title", e.target.value)} />
+        </div>
+        <div className="field-row-stacked" style={{ marginBottom: 4 }}>
+          <label>Creator:</label>
+          <input type="text" value={form.creator} onChange={(e) => update("creator", e.target.value)} />
+        </div>
+        <div className="field-row-stacked" style={{ marginBottom: 4 }}>
+          <label>Release Date:</label>
+          <input type="date" value={form.releaseDate} onChange={(e) => update("releaseDate", e.target.value)} />
+        </div>
+      </fieldset>
 
-        <label>Title:</label>
-        <input type="text" value={form.title} onChange={(e) => update("title", e.target.value)} />
+      <fieldset style={{ marginTop: 8 }}>
+        <legend>Review</legend>
+        <div className="field-row" style={{ marginBottom: 4 }}>
+          <label>Rating:</label>
+          <StarRating value={form.rating} onChange={(v) => update("rating", v)} />
+        </div>
+        <div className="field-row-stacked">
+          <label>Notes:</label>
+          <textarea value={form.review} onChange={(e) => update("review", e.target.value)} rows={3} />
+        </div>
+      </fieldset>
 
-        <label>Creator:</label>
-        <input type="text" value={form.creator} onChange={(e) => update("creator", e.target.value)} />
-
-        <label>Released:</label>
-        <input type="date" value={form.releaseDate} onChange={(e) => update("releaseDate", e.target.value)} />
-
-        <label>Image:</label>
-        <input type="text" value={form.imageUrl} onChange={(e) => update("imageUrl", e.target.value)} readOnly />
-
-        <label>Rating:</label>
-        <div><StarRating value={form.rating} onChange={(v) => update("rating", v)} /></div>
-
-        <label>Review:</label>
-        <textarea value={form.review} onChange={(e) => update("review", e.target.value)} rows={3} />
-      </div>
-
-      {form.imageUrl && (
-        <img src={resolveImageUrl(form.imageUrl)!} alt="" style={{ maxHeight: 80, marginTop: 8 }} />
-      )}
-
-      <div className="flex gap-2 justify-end" style={{ marginTop: 12 }}>
-        <button onClick={onCancel}>Cancel</button>
+      <div className="field-row" style={{ justifyContent: "flex-end", marginTop: 12, gap: 6 }}>
         <button onClick={handleSubmit} disabled={saving || !form.title.trim()}>
           {saving ? "Saving..." : submitLabel}
         </button>
+        <button onClick={onCancel}>Cancel</button>
       </div>
     </div>
   );

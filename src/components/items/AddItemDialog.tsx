@@ -134,35 +134,34 @@ export function AddItemDialog({
       {step === "search" && (
         <fieldset>
           <legend>Search</legend>
-          <div className="flex gap-2 items-center">
+          <div className="field-row-stacked" style={{ marginBottom: 6 }}>
+            <label>Enter a title to search:</label>
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="Enter title..."
-              style={{ flex: 1 }}
               autoFocus
             />
+          </div>
+          <div className="field-row" style={{ gap: 6 }}>
             <button onClick={handleSearch} disabled={searching || !query.trim()}>
-              {searching ? <Spinner /> : "Search"}
+              {searching ? "Searching..." : "Search"}
+            </button>
+            <button onClick={() => { setSelectedCandidate(null); setStep("form"); }}>
+              Manual Entry
             </button>
           </div>
-          <button
-            onClick={() => { setSelectedCandidate(null); setStep("form"); }}
-            style={{ marginTop: 8, fontSize: 12 }}
-          >
-            Manual Entry
-          </button>
+          {searching && <div style={{ marginTop: 8 }}><Spinner /></div>}
         </fieldset>
       )}
 
       {step === "candidates" && (
         <div>
           <CandidateSelector candidates={candidates} onSelect={handleSelectCandidate} />
-          <div className="flex gap-2" style={{ marginTop: 8 }}>
+          <div className="field-row" style={{ marginTop: 8, gap: 6 }}>
             <button onClick={() => setStep("search")}>Back</button>
-            <button onClick={() => { setSelectedCandidate(null); setStep("form"); }}>Manual</button>
+            <button onClick={() => { setSelectedCandidate(null); setStep("form"); }}>Manual Entry</button>
           </div>
         </div>
       )}

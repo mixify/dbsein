@@ -24,16 +24,12 @@ export function CategoryManager({
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const handleAdd = async () => {
     if (!newName.trim()) return;
     await onAdd(newName.trim());
     setNewName("");
-  };
-
-  const startRename = (cat: Category) => {
-    setEditingId(cat.id);
-    setEditingName(cat.name);
   };
 
   const handleRename = async () => {
@@ -42,16 +38,18 @@ export function CategoryManager({
     setEditingId(null);
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async () => {
+    if (!selectedId) return;
     if (!confirm("Delete this category and all its items?")) return;
-    await onDelete(id);
+    await onDelete(selectedId);
+    setSelectedId(null);
   };
 
   return (
-    <Dialog open={open} onClose={onClose} title="Categories">
+    <Dialog open={open} onClose={onClose} title="Edit Categories">
       <fieldset>
         <legend>Add New</legend>
-        <div className="flex gap-2 items-center">
+        <div className="field-row" style={{ gap: 4 }}>
           <input
             type="text"
             value={newName}
@@ -59,38 +57,60 @@ export function CategoryManager({
             onKeyDown={(e) => e.key === "Enter" && handleAdd()}
             style={{ flex: 1 }}
           />
-          <button onClick={handleAdd}>Add</button>
+          <button onClick={handleAdd} disabled={!newName.trim()}>Add</button>
         </div>
       </fieldset>
+
       <fieldset style={{ marginTop: 8 }}>
-        <legend>Manage</legend>
-        {categories.map((cat) => (
-          <div key={cat.id} className="flex items-center justify-between" style={{ padding: "2px 0" }}>
-            {editingId === cat.id ? (
-              <div className="flex gap-1 items-center flex-1">
-                <input
-                  type="text"
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleRename()}
-                  style={{ flex: 1 }}
-                  autoFocus
-                />
-                <button onClick={handleRename}>OK</button>
-                <button onClick={() => setEditingId(null)}>Cancel</button>
-              </div>
-            ) : (
-              <>
-                <span style={{ fontSize: 12 }}>{cat.name}</span>
-                <div className="flex gap-1">
-                  <button onClick={() => startRename(cat)} style={{ fontSize: 11 }}>Rename</button>
-                  <button onClick={() => handleDelete(cat.id)} style={{ fontSize: 11 }}>Delete</button>
-                </div>
-              </>
-            )}
-          </div>
-        ))}
+        <legend>Categories</legend>
+        <ul className="tree-view" style={{ height: 120, overflow: "auto" }}>
+          {categories.map((cat) => (
+            <li
+              key={cat.id}
+              onClick={() => setSelectedId(cat.id)}
+              style={{
+                padding: "2px 4px",
+                cursor: "pointer",
+                background: selectedId === cat.id ? "#316ac5" : "transparent",
+                color: selectedId === cat.id ? "#fff" : "inherit",
+              }}
+            >
+              {editingId === cat.id ? (
+                <span className="field-row" style={{ gap: 4 }} onClick={(e) => e.stopPropagation()}>
+                  <input
+                    type="text"
+                    value={editingName}
+                    onChange={(e) => setEditingName(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleRename()}
+                    style={{ width: 120 }}
+                    autoFocus
+                  />
+                  <button onClick={handleRename}>OK</button>
+                  <button onClick={() => setEditingId(null)}>Cancel</button>
+                </span>
+              ) : (
+                cat.name
+              )}
+            </li>
+          ))}
+        </ul>
+        <div className="field-row" style={{ marginTop: 6, gap: 6 }}>
+          <button
+            disabled={!selectedId}
+            onClick={() => {
+              const cat = categories.find(c => c.id === selectedId);
+              if (cat) { setEditingId(cat.id); setEditingName(cat.name); }
+            }}
+          >
+            Rename
+          </button>
+          <button disabled={!selectedId} onClick={handleDelete}>Delete</button>
+        </div>
       </fieldset>
+
+      <div className="field-row" style={{ justifyContent: "flex-end", marginTop: 12 }}>
+        <button onClick={onClose}>Close</button>
+      </div>
     </Dialog>
   );
 }

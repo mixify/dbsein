@@ -26,6 +26,8 @@ export interface GeminiCandidate {
   image_search_query: string;
 }
 
-export type SortMode = "rating" | "reviewed_at" | "release_date";
+export type SortColumn = "rating" | "reviewed_at" | "release_date" | "updated_at" | "creator" | "title";
+export type SortDir = "asc" | "desc";
+export type SortMode = `${SortColumn}_${SortDir}`;
 
 export const DEFAULT_CATEGORIES = ["음악", "영화", "애니", "책"];

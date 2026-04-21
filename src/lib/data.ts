@@ -25,8 +25,13 @@ export function deleteCategory(id: string) {
 }
 
 // Items
-export function getItems(categoryId?: string | null, sort: string = "reviewed_at"): Item[] {
-  const orderCol = sort === "rating" ? "rating" : sort === "release_date" ? "release_date" : "reviewed_at";
+const VALID_COLUMNS = new Set(["rating", "reviewed_at", "release_date", "updated_at", "creator", "title"]);
+
+export function getItems(categoryId?: string | null, sort: string = "updated_at_desc"): Item[] {
+  const parts = sort.match(/^(.+)_(asc|desc)$/);
+  const col = parts && VALID_COLUMNS.has(parts[1]) ? parts[1] : "updated_at";
+  const dir = parts?.[2] === "asc" ? "ASC" : "DESC";
+
   let sql = `SELECT * FROM items`;
   const params: unknown[] = [];
 
@@ -35,7 +40,7 @@ export function getItems(categoryId?: string | null, sort: string = "reviewed_at
     params.push(categoryId);
   }
 
-  sql += ` ORDER BY ${orderCol} DESC`;
+  sql += ` ORDER BY ${col} ${dir}`;
 
   return db.prepare(sql).all(...params) as Item[];
 }
