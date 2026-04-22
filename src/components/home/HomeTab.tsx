@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import type { Category, GeminiCandidate } from "@/types";
 import { Spinner } from "@/components/ui/Spinner";
+import { SeaBackground } from "@/components/home/SeaBackground";
 import { CandidateSelector } from "@/components/items/CandidateSelector";
 import { ImagePicker } from "@/components/items/ImagePicker";
 import { ItemForm } from "@/components/items/ItemForm";
@@ -119,16 +120,16 @@ export function HomeTab({
     : null;
 
   const s = {
-    page: { background: "#fff", color: "#000", fontFamily: "arial, sans-serif", fontSize: 13, minHeight: "100%", display: "flex", flexDirection: "column" as const, alignItems: "center" },
-    top: { width: "100%", textAlign: "right" as const, padding: "4px 8px", fontSize: 11, color: "#666" },
-    center: { flex: 1, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", width: "100%", maxWidth: 500, padding: "0 16px" },
+    page: { position: "relative" as const, color: "#e0e8f0", fontFamily: "arial, sans-serif", fontSize: 13, minHeight: "100%", display: "flex", flexDirection: "column" as const, alignItems: "center", overflow: "hidden" },
+    top: { position: "relative" as const, zIndex: 1, width: "100%", textAlign: "right" as const, padding: "4px 8px", fontSize: 11, color: "rgba(255,255,255,0.6)" },
+    center: { position: "relative" as const, zIndex: 1, flex: 1, display: "flex", flexDirection: "column" as const, alignItems: "center", justifyContent: "center", width: "100%", maxWidth: 500, padding: "0 16px" },
     searchBox: { display: "flex", width: "100%", marginBottom: 8 },
     input: { flex: 1, padding: "5px 8px", fontSize: 13, border: "1px solid #cdcdcd" },
     btn: { padding: "5px 12px", fontSize: 12, background: "#f2f2f2", border: "1px solid #cdcdcd", cursor: "pointer", whiteSpace: "nowrap" as const },
     btnPrimary: { padding: "5px 16px", fontSize: 12, background: "#4285f4", color: "#fff", border: "1px solid #3079ed", cursor: "pointer", fontWeight: "bold" as const },
     links: { display: "flex", gap: 12, justifyContent: "center", margin: "12px 0", fontSize: 12 },
-    a: { color: "#1a0dab", textDecoration: "none" },
-    footer: { padding: "8px", fontSize: 11, color: "#999", textAlign: "center" as const, borderTop: "1px solid #e4e4e4", width: "100%" },
+    a: { color: "#88bbff", textDecoration: "none" },
+    footer: { position: "relative" as const, zIndex: 1, padding: "8px", fontSize: 11, color: "rgba(255,255,255,0.4)", textAlign: "center" as const, borderTop: "1px solid rgba(255,255,255,0.1)", width: "100%" },
     resultArea: { width: "100%", textAlign: "left" as const, marginTop: 8 },
   };
 
@@ -158,6 +159,9 @@ export function HomeTab({
 
   return (
     <div style={s.page}>
+      <SeaBackground />
+
+      {/* Content over background */}
       {/* Top right links */}
       <div style={s.top}>
         <a href="https://github.com/mixify/dbsein" target="_blank" style={s.a}>GitHub</a>
